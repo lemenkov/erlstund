@@ -1,0 +1,6 @@
+*.diff
+*.orig
+*.patch
+*.rej
+*~
+ebin/
