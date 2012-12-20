@@ -40,7 +40,7 @@
 %% ===================================================================
 
 start(_StartType, _StartArgs) ->
-    stund_sup:start_link().
+	stund_sup:start_link().
 
 stop(_State) ->
-    ok.
+	ok.

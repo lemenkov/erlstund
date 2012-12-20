@@ -40,6 +40,7 @@
 
 %% Helper macro for declaring children of supervisor
 -define(CHILD(I), {I, {I, start_link, []}, permanent, 5000, worker, [I]}).
+-define(CHILD(I,P), {I, {I, start_link, [P]}, transient, 5000, worker, [I]}).
 
 %% ===================================================================
 %% API functions
@@ -53,5 +54,10 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-	{ok, { {one_for_one, 5, 10}, [?CHILD(stund)]} }.
+	{ok, List} = application:get_env(stund, listen),
+	Listeners = lists:map(fun
+				({tcp, IpStr, Port}) -> {ok, Ip} = inet_parse:address(IpStr), ?CHILD(tcp_listener, [Ip, Port]);
+				({udp, IpStr, Port}) -> {ok, Ip} = inet_parse:address(IpStr), ?CHILD(udp_listener, [Ip, Port])
+			end, List),
+		{ok, {{one_for_one, 5, 10}, [?CHILD(stund)] ++ Listeners}}.
 

@@ -30,7 +30,6 @@
 
 -module(stund).
 -behaviour(gen_server).
--define(SERVER, ?MODULE).
 
 %% ------------------------------------------------------------------
 %% API Function Exports
@@ -43,38 +42,63 @@
 %% ------------------------------------------------------------------
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+		terminate/2, code_change/3]).
+
+%% ------------------------------------------------------------------
+%% External Definitions
+%% ------------------------------------------------------------------
+
+-include_lib("rtplib/include/stun.hrl").
 
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
 
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+	gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
 %% ------------------------------------------------------------------
 
+-record(state, {
+	}).
+
 init(Args) ->
-    {ok, Args}.
+	{ok, Args}.
 
 handle_call(_Request, _From, State) ->
-    {reply, ok, State}.
+	{reply, ok, State}.
+
+handle_cast({Listener, Msg, FIp, FPort, TIp, TPort}, State) ->
+	{ok, Stun} = stun:decode(Msg),
+	TID = Stun#stun.transactionid,
+	StunResp = #stun{
+		class = success,
+		method = binding,
+		transactionid = TID,
+		fingerprint = false,
+		attrs = [
+			{'MAPPED-ADDRESS',{FIp,FPort}},
+			{'SOURCE-ADDRESS',{TIp,TPort}},
+			{'SOFTWARE',<<"ErlSTUNd (based on rtplib)">>}
+		]
+	},
+	gen_server:cast(Listener, {stun:encode(StunResp), FIp, FPort}),
+	{noreply, State};
 
 handle_cast(_Msg, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 handle_info(_Info, State) ->
-    {noreply, State}.
+	{noreply, State}.
 
 terminate(_Reason, _State) ->
-    ok.
+	ok.
 
 code_change(_OldVsn, State, _Extra) ->
-    {ok, State}.
+	{ok, State}.
 
 %% ------------------------------------------------------------------
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
-
